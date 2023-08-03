@@ -270,3 +270,85 @@ x = Torch.rand(10, 2)
 model = TwoLayerNet.new(2, 4, 3)
 s = model.predict(x) # => (tensor#shape[10,3])
 ```
+
+## 1.3.4.4 计算图之sum节点的实现
+
+```ruby
+# Using numo/narray
+d, n = 8, 7
+x = Numo::DFloat.new(n, d).rand
+y = x.sum(0).expand_dims(1)
+
+dy = Numo::DFloat.new(1, d).rand
+dx = dy.repeat(n, axis: 0) # => (Numo::DFloat#shape=[7,8])
+```
+
+```ruby
+# Using torch
+d, n = 8, 7
+x = Torch.rand(n, d)
+y = x.sum(0, true)
+
+dy = Torch.rand(1, d)
+dx = dy.repeat(n, 1) # => (tensor#shape[7,8])
+```
+
+## 1.3.4.5 计算图之矩阵乘积（MatMul）节点实现为层类
+
+```ruby
+# Using numo/narray
+
+class MatMul
+  attr_reader :params, :grands, :x
+
+  def initialize(weights = [])
+    @params = [weights]
+    @grads = [Numo::DFloat.zeros(weights.size)]
+    @x = nil
+  end
+
+  def forward(x)
+    @x = x
+    weights = params[0]
+    x.dot(weights)
+  end
+
+  def backward(dout)
+    weights = params[0]
+    dx = dout.dot(weights.transpose)
+    dw = x.transpose(0, 1).dot(dout)
+    grads[0] = dw
+
+    dx
+  end
+end
+```
+
+```ruby
+# Using torch
+
+class MatMul
+  attr_reader :params, :grands, :x
+
+  def initialize(weights = [])
+    @params = [weights]
+    @grads = [Torch.zeros[weights.size]]
+    @x = nil
+  end
+
+  def forward(x)
+    @x = x
+    weights = params[0]
+    x.matmul(weights)
+  end
+
+  def backward(dout)
+    weights = params[0]
+    dx = dout.matmul(weights.transpose(0, 1))
+    dw = x.transpose(0, 1).matmul(dout)
+    grads[0] = dw
+
+    dx
+  end
+end
+```
