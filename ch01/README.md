@@ -299,7 +299,7 @@ dx = dy.repeat(n, 1) # => (tensor#shape[7,8])
 # Using numo/narray
 
 class MatMul
-  attr_reader :params, :grands, :x
+  attr_reader :params, :grads, :x
 
   def initialize(weights = [])
     @params = [weights]
@@ -328,7 +328,7 @@ end
 # Using torch
 
 class MatMul
-  attr_reader :params, :grands, :x
+  attr_reader :params, :grads, :x
 
   def initialize(weights = [])
     @params = [weights]
@@ -349,6 +349,179 @@ class MatMul
     grads[0] = dw
 
     dx
+  end
+end
+```
+
+## 1.3.5 梯度的推导和反向传播实现
+
+Sigmoid层
+
+```ruby
+# Using numo/narray
+
+class Sigmoid
+  attr_reader :params, :grads, :out
+
+  def initialize
+    @params = []
+    @grads = []
+    @out = nil
+  end
+
+  def forward(x)
+    @out = 1 / (1 + Math.exp(-x))
+  end
+
+  def backward(dout)
+    dx = dout * (1.0 - out) * out
+
+    dx
+  end
+end
+```
+
+```ruby
+# Using torch
+
+class Sigmoid
+  attr_reader :params, :grads, :out
+
+  def initialize
+    @params = []
+    @grads = []
+    @out = nil
+  end
+
+  def forward(x) # x(tensor)
+    @out = x.sigmoid
+  end
+
+  def backward(dout)
+    dout * (1.0 - out) * out
+  end
+end
+```
+
+Affine层
+
+```ruby
+# Using numo/narray
+class Affine
+  attr_reader :params, :grads, :x
+
+  def initialize(weights, biases)
+    @params = [weights, biases]
+    @grads = [Numo::DFloat.zeros(weights.size), Numo::DFloat.zeros(biases.size)]
+    @x = nil
+  end
+
+  def forward(x)
+    @x = x
+    w, b = params
+    out = x.dot(w) + b
+    out
+  end
+
+  def backward(dout)
+    w, b = params
+    dx = dout.dot(w.transpose) + b
+    dw = x.transpose(0, 1).dot(dout)
+    db = dout.sum(0)
+
+    @grads[0] = dw
+    @grads[1] = db
+
+    dx
+  end
+end
+```
+
+```ruby
+# Using torch
+class Affine
+  attr_reader :params, :grads, :x
+
+  def initialize(weights, biases)
+    @params = [weights, biases]
+    @grads = [Torch.zeros(weights.size), Torch.zeros(biases.size)]
+    @x = nil
+  end
+
+  def forward(x)
+    @x = x
+    w, b = params
+    x.matmul(w) + b
+  end
+
+  def backward(dout)
+    w, b = params
+    dx = dout.matmul(w.transpose(0, 1)) + b
+    dw = x.transpose(0, 1).matmul(dout)
+    db = dout.sum(0)
+
+    @grads[0] = dw
+    @grads[1] = db
+
+    dx
+  end
+end
+```
+
+Softmax 层
+
+```ruby
+class Softmax
+  attr_reader :params, :grads, :out
+
+  def initialize
+    @params = []
+    @grads= []
+    @out = nil
+  end
+
+  def forward(x) # x(tensor with dtype:float)
+    @out = Torch::NN::F.softmax(x)
+  end
+
+  def backward(dout)
+    dx = out * dout
+    sumdx = dx.sum(0)
+    dx -= out * sumdx
+    dx
+  end
+end
+```
+
+Softmax with Loss 层
+
+```ruby
+class SoftmaxWithLoss
+  attr_reader :params, :grads
+  attr_reader :y # softmax的输出
+  attr_reader :t # t:监督标签
+
+  def initialize
+    @params = []
+    @grads = []
+  end
+
+  def forward(x, t)
+    @y = Torch::NN::F.softmax(x)
+
+    # 在监督标签为one-hot向量的情况下，转换为正确解标签的索引
+    @t = t.size == y.size ? t.argmax : t
+
+    Torch::NN::F.cross_entropy(y, t)
+  end
+
+  def backward(dout = 1)
+    batch_size = t.shape[0]
+
+    dx = y.clone
+    dx[Torch.arange(batch_size), t] -= 1
+    dx *= dout
+    dx / batch_size
   end
 end
 ```
