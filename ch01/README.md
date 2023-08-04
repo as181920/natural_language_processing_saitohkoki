@@ -110,7 +110,7 @@ h = x.dot(w1) + b1 # => (Numo::DFloat#shape=[10,4])
 w1 = Torch.rand(2, 4)
 b1 = Torch.rand(4)
 x = Torch.rand(10, 2)
-h = x.matmul(w1) + b1 # => (tensor#shape=[10,4])
+h = x.matmul(w1) + b1 # => (Tensor#shape=[10,4])
 ```
 
 增加sigmoid函数后的全链接层变换
@@ -136,7 +136,7 @@ w2 = Torch.rand(4, 3)
 b2 = Torch.rand(3)
 h = x.matmul(w1) + b1
 a = h.sigmoid
-s = a.matmul(w2) + b2 # => (tensor#shape=[10,3])
+s = a.matmul(w2) + b2 # => (Tensor#shape=[10,3])
 ```
 
 ## 1.2.2 层的类化及正向传播的实现
@@ -268,7 +268,7 @@ s = model.predict(x) # => (Numo::DFloat#shape=[10,3])
 # Using torch
 x = Torch.rand(10, 2)
 model = TwoLayerNet.new(2, 4, 3)
-s = model.predict(x) # => (tensor#shape[10,3])
+s = model.predict(x) # => (Tensor#shape[10,3])
 ```
 
 ## 1.3.4.4 计算图之sum节点的实现
@@ -290,7 +290,7 @@ x = Torch.rand(n, d)
 y = x.sum(0, true)
 
 dy = Torch.rand(1, d)
-dx = dy.repeat(n, 1) # => (tensor#shape[7,8])
+dx = dy.repeat(n, 1) # => (Tensor#shape[7,8])
 ```
 
 ## 1.3.4.5 计算图之矩阵乘积（MatMul）节点实现为层类
@@ -545,3 +545,92 @@ class SGD
   end
 end
 ```
+
+## 1.4 使用神经网络解决问题
+
+生成螺旋状数据集
+```ruby
+def load_data
+  n = 100  # 各类的样本数
+  dim = 2  # 数据的元素个数
+  cls_num = 3  # 类别数
+
+  x = Torch.zeros(n * cls_num, dim) # => (Torch::Tensor#shape[300,2])
+  t = Torch.zeros(n * cls_num, cls_num, dtype: :int32)
+
+  cls_num.times.with_index do |cls_index|
+    n.times.with_index do |n_index|
+      rate = n_index.to_f / n
+      radius = 1.0 * rate
+      theta = cls_index * 4.0 + rate * 4.0 + Torch.rand(1) * 0.2
+
+      ix = n * cls_index + n_index
+      x[ix] = [radius * theta.sin, radius * theta.cos].flatten
+      t[ix, cls_index] = 1
+    end
+  end
+
+  return x, t
+end
+```
+
+图示螺旋状数据集
+```ruby
+require "matplotlib/pyplot"
+plt = Matplotlib::Pyplot
+
+x, t = load_data
+puts "x: #{x.shape}"
+puts "t: #{t.shape}"
+
+n = 100
+cls_num = 3
+markers = %w[o x ^]
+
+cls_num.times.map do |idx|
+  plt.plot(x[idx*n...(idx+1)*n, 0].to_a, x[idx*n...(idx+1)*n, 1].to_a, marker: markers[idx])
+end
+
+plt.show()
+```
+
+神经网络的实现(two_layer_net.rb)
+
+```ruby
+class TwoLayerNet
+  attr_reader :layers, :loss_layer, :params, :grads
+
+  def initialize(input_size, hidden_size, output_size)
+    w1 = 0.01 * Torch.rand(input_size, hidden_size)
+    b1 = Torch.zeros(hidden_size)
+    w2 = 0.01 * Torch.rand(hidden_size, output_size)
+    b2 = Torch.zeros(output_size)
+
+    @layers = [
+      Affine.new(w1, b1),
+      Sigmoid.new,
+      Affine.new(w2, b2)
+    ]
+
+    @loss_layer = SoftmaxWithLoss.new
+
+    @params = layers.map(&:params)
+    @grads = layers.map(&:grads)
+  end
+
+  def predict(x)
+  end
+
+  def forward(x, t)
+  end
+
+  def backward(dout = 1)
+  end
+end
+```
+
+学习用的代码
+
+```ruby
+```
+

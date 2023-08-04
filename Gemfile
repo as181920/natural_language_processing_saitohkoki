@@ -18,6 +18,6 @@ gem "rubocop-performance"
 gem "rubocop-rake"
 gem "webmock"
 
-gem "torch-rb"
 gem "matplotlib"
 gem "numo-narray"
+gem "torch-rb"
