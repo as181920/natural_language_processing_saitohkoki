@@ -525,3 +525,23 @@ class SoftmaxWithLoss
   end
 end
 ```
+
+## 1.3.6 权重的更新
+
+梯度下降法(Stochastic gradient descent, SGD)的实现
+
+```ruby
+class SGD
+  attr_reader :lr # learning rate 学习率
+
+  def initialize(lr: 0.01)
+    @lr = lr
+  end
+
+  def update(params, grads)
+    params.map.with_index do |param, index|
+      param - lr * grads[index]
+    end
+  end
+end
+```
