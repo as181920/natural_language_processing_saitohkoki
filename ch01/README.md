@@ -188,7 +188,7 @@ class TwoLayerNet
     ]
 
     # collect params
-    @params = layers.map(&:params)
+    @params = layers.inject([]) { |a, layer| a.concat(layer.params) }
   end
 
   def predict(x)
@@ -244,7 +244,7 @@ class TwoLayerNet
     ]
 
     # collect params
-    @params = layers.map(&:params)
+    @params = layers.inject([]) { |a, layer| a.concat(layer.params) }
   end
 
   def predict(x)
@@ -315,7 +315,7 @@ class MatMul
 
   def backward(dout)
     weights = params[0]
-    dx = dout.dot(weights.transpose)
+    dx = dout.dot(weights.transpose(0, 1))
     dw = x.transpose(0, 1).dot(dout)
     grads[0] = dw
 
@@ -455,8 +455,8 @@ class Affine
   end
 
   def backward(dout)
-    w, b = params
-    dx = dout.matmul(w.transpose(0, 1)) + b
+    w, _b = params
+    dx = dout.matmul(w.transpose(0, 1))
     dw = x.transpose(0, 1).matmul(dout)
     db = dout.sum(0)
 
@@ -510,9 +510,9 @@ class SoftmaxWithLoss
     @y = Torch::NN::F.softmax(x)
 
     # 在监督标签为one-hot向量的情况下，转换为正确解标签的索引
-    @t = t.size == y.size ? t.argmax : t
+    @t = t.size == y.size ? t.argmax(1) : t
 
-    Torch::NN::F.cross_entropy(y, t)
+    Torch::NN::F.cross_entropy(@y, @t)
   end
 
   def backward(dout = 1)
@@ -540,7 +540,7 @@ class SGD
 
   def update(params, grads)
     params.map.with_index do |param, index|
-      param - lr * grads[index]
+      param.sub!(lr * grads[index])
     end
   end
 end
@@ -614,17 +614,26 @@ class TwoLayerNet
 
     @loss_layer = SoftmaxWithLoss.new
 
-    @params = layers.map(&:params)
-    @grads = layers.map(&:grads)
+    @params = layers.inject([]) { |a, layer| a.concat(layer.params) }
+    @grads = layers.inject([]) { |a, layer| a.concat(layer.grads) }
   end
 
   def predict(x)
+    layers.each { |layer| x = layer.forward(x) }
+
+    x
   end
 
   def forward(x, t)
+    score = predict(x)
+    loss_layer.forward(score, t)
   end
 
   def backward(dout = 1)
+    dout = loss_layer.backward(dout)
+    layers.reverse_each { |layer| dout = layer.backward(dout) }
+
+    dout
   end
 end
 ```
@@ -632,5 +641,49 @@ end
 学习用的代码
 
 ```ruby
+# 设定超参数
+max_epoch = 300
+batch_size = 30
+hidden_size = 10
+learning_rate = 1.0
+
+x, t = load_data
+model = TwoLayerNet.new(2, hidden_size, 3)
+optimizer = SGD.new(lr: learning_rate)
+
+# 学习用的变量
+data_size = x.length
+max_iters = data_size / batch_size
+total_loss = 0
+loss_count = 0
+loss_list = []
+
+max_epoch.times.map do |epoch|
+  # 打乱数据
+  idx = Torch.randperm(data_size)
+  x = x[idx]
+  t = t[idx]
+
+  max_iters.times.map do |iters|
+    batch_x = x[iters*batch_size...(iters+1)*batch_size]
+    batch_t = t[iters*batch_size...(iters+1)*batch_size]
+
+    # 计算梯度，更新参数
+    loss = model.forward(batch_x, batch_t)
+    model.backward()
+    optimizer.update(model.params, model.grads)
+
+    total_loss += loss
+    loss_count += 1
+
+    # 定期输出学习过程
+    if (iters+1) % 10 == 0
+      avg_loss = total_loss / loss_count
+      print("| epoch %d |  iter %d / %d | loss %.2f\n" % [epoch + 1, iters + 1, max_iters, avg_loss])
+      loss_list.append(avg_loss)
+      total_loss, loss_count = 0, 0
+    end
+  end
+end
 ```
 

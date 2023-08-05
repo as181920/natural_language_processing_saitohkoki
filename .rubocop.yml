@@ -7,6 +7,9 @@ AllCops:
   TargetRubyVersion: 3.1
   NewCops: enable
 
+Naming/MethodParameterName:
+  Enabled: false
+
 Style/Documentation:
   # Skips checking to make sure top level modules / classes have a comment.
   Enabled: false
@@ -61,3 +64,7 @@ Metrics/ModuleLength:
 
 Performance/MethodObjectAsBlock:
   Enabled: false
+
+Performance::TimesMap:
+  Enabled: false
+
