@@ -2,6 +2,7 @@
 
 source "https://rubygems.org"
 
+gem "activesupport"
 gem "bundler"
 gem "debug"
 gem "gem-ctags"

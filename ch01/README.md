@@ -687,3 +687,6 @@ max_epoch.times.map do |epoch|
 end
 ```
 
+Tainer类: 参见common/trainer.rb
+
+使用Trainer类进行学习: ch01/ train.rb
