@@ -14,14 +14,14 @@ class Trainer
     @current_epoch = 0
   end
 
-  def fit(x, t, max_epoch: 10, batch_size: 32, max_grad: nil, eval_interval: 20)
+  def fit(x, t, max_epoch: 10, batch_size: 32, _max_grad: nil, eval_interval: 20) # rubocop:disable Metrics/MethodLength, Metrics/ParameterLists, Metrics/AbcSize
     @eval_interval = eval_interval
     data_size = x.length
     max_iters = data_size / batch_size
     total_loss = 0
     loss_count = 0
 
-    start_time = Time.now.to_f
+    Time.now.to_f
 
     max_epoch.times.map do |_epoch|
       # 打乱数据
@@ -30,8 +30,8 @@ class Trainer
       t = t[idx]
 
       max_iters.times.map do |iters|
-        batch_x = x[iters*batch_size...(iters+1)*batch_size]
-        batch_t = t[iters*batch_size...(iters+1)*batch_size]
+        batch_x = x[iters * batch_size...(iters + 1) * batch_size]
+        batch_t = t[iters * batch_size...(iters + 1) * batch_size]
 
         # 计算梯度，更新参数
         loss = model.forward(batch_x, batch_t)
@@ -44,12 +44,13 @@ class Trainer
         loss_count += 1
 
         # 评价
-        if eval_interval.present? && (iters % eval_interval).zero?
-          avg_loss = total_loss / loss_count
-          print("| epoch %d |  iter %d / %d | loss %.2f\n" % [current_epoch + 1, iters + 1, max_iters, avg_loss])
-          @loss_list.append(avg_loss)
-          total_loss, loss_count = 0, 0
-        end
+        next unless eval_interval.present? && (iters % eval_interval).zero?
+
+        avg_loss = total_loss / loss_count
+        print(format("| epoch %d |  iter %d / %d | loss %.2f\n", current_epoch + 1, iters + 1, max_iters, avg_loss)) # rubocop:disable Style/FormatStringToken
+        @loss_list.append(avg_loss)
+        total_loss = 0
+        loss_count = 0
       end
 
       @current_epoch += 1
@@ -67,4 +68,3 @@ class Trainer
     plt.show
   end
 end
-

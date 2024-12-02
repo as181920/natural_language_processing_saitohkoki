@@ -1,6 +1,6 @@
 module Dataset
   module Spiral
-    extend self
+    module_function
 
     def load_data # rubocop:disable Metrics/MethodLength
       n = 100  # 各类的样本数

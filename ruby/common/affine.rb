@@ -19,7 +19,7 @@ class Affine
     w, _b = params
     dx = dout.matmul(w.transpose(0, 1))
     dw = x.transpose(0, 1).matmul(dout)
-    db = dout.sum(0)
+    db = dout.sum
 
     @grads[0] = dw
     @grads[1] = db

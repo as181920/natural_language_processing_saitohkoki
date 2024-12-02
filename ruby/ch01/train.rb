@@ -8,7 +8,7 @@ require_relative "../common/sigmoid"
 require_relative "../common/softmax_with_loss"
 require_relative "../common/trainer"
 require_relative "../dataset/spiral"
-require_relative "./two_layer_net"
+require_relative "two_layer_net"
 
 # 设定超参数
 max_epoch = 300

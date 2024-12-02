@@ -6,7 +6,7 @@ require_relative "../common/softmax_with_loss"
 class TwoLayerNet
   attr_reader :layers, :loss_layer
 
-  def initialize(input_size, hidden_size, output_size) # rubocop:disable Metrics/MethodLength
+  def initialize(input_size, hidden_size, output_size)
     w1 = 0.01 * Torch.rand(input_size, hidden_size)
     b1 = Torch.zeros(hidden_size)
     w2 = 0.01 * Torch.rand(hidden_size, output_size)
