@@ -5,8 +5,7 @@ class MatMul
 
   def initialize(weights = [])
     @params = weights
-    @grads = Torch.zeros[weights.size]
-    @x = nil
+    @grads = Torch.zeros(weights.shape)
   end
 
   def forward(x)
